@@ -20,7 +20,7 @@ Three endpoints are defined:
 * `/<orgnr>/holdings`
   Returns all registered holdings a company has
 
-* `<orgnr>/summary`
+* /`<orgnr>/summary`
   Returns a basic summary of a company's ownership,
   as well as some other potentially interesting information.
 
@@ -46,6 +46,7 @@ $ python main.py
 (assuming `python` points to your Python 3 interpreter)
 
 The server is now running on [http://localhost:5000], and you should be able
+to access the endpoints listed above.
 
 
 ## Testing
