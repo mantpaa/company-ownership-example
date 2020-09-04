@@ -2,7 +2,7 @@ from collections import defaultdict
 import csv
 
 from flask import Flask, jsonify
-
+import os # todo - remove after debug
 
 app = Flask(__name__)
 
@@ -84,11 +84,9 @@ class OwnershipRecord:
         * 'company' if the holder is a company
         """
 
-        # TODO: determine type of owner.
-        # If owner is a person, return 'person'.
-        # If owner is a company, return 'company'.
-
-        return ""
+        if len(str(self.owner_birth_or_orgnr)) > 4:
+            return 'person'
+        return 'company'
 
     @property
     def percentage(self):
@@ -103,9 +101,7 @@ class OwnershipRecord:
         Note: should return a standard python float.
         """
 
-        # TODO: compute this holding's percentage of
-        # total shares in the company
-        return 0.0
+        return (self.number_of_shares/self.total_shares)*100
 
     def to_json(self):
         """
@@ -148,6 +144,8 @@ class OwnershipDatabase:
         Reads `filename` and stores its contents in
         `self.data`.
         """
+        print(" TESTING inside: ",os.getcwd())
+        print(filename)
         self.data = defaultdict(list)
 
         with open(filename, 'r') as f:
@@ -188,27 +186,38 @@ class OwnershipDatabase:
                 )
 
     def get_owners(self, orgnr):
-
-        # TODO: return all ownership records for `orgnr`
-        return []
+        #  return all ownership records for `orgnr`
+        return self.data[orgnr]
 
     def get_holdings(self, orgnr):
+        #  return all holdings for `orgnr`
+        l = []
+        for k, v in self.data.items():
+            print(k, v)
+            for r in v:
+                if r.owner_birth_or_orgnr == orgnr:
+                    l.append(r)
+        return l
 
-        # TODO: return all holdings for `orgnr`
-        return []
+    def has_foreign_owners(self, orgnr):
+        l = self.data[orgnr]
+        for owner in l:
+            if owner.owner_country != 'NOR':
+                return True
+        return False
+
+    def has_multiple_share_classes(self, orgnr):
+        l = set([holding.share_class for holding in self.get_holdings(orgnr)])
+        return len(l) > 1
 
     def get_summary(self, orgnr):
-        # TODO: compute number of registered owners for the company
-        number_of_owners = 0
+        number_of_owners = len(self.get_owners(orgnr))
 
-        # TODO: compute number of registered holdings for the company
-        number_of_holdings = 0
+        number_of_holdings = len(self.get_holdings(orgnr))
 
-        # TODO: check if the company has foreign owners
-        has_foreign_owners = False
+        has_foreign_owners = self.has_foreign_owners(orgnr)
 
-        # TODO: check if the company has multiple share classes
-        has_multiple_share_classes = False
+        has_multiple_share_classes = self.has_multiple_share_classes(orgnr)
 
         return {
             "number_of_owners": number_of_owners,
@@ -217,6 +226,7 @@ class OwnershipDatabase:
             "has_multiple_share_classes": has_multiple_share_classes
         }
 
+print("TESTING outside: ", os.getcwd())
 
 db = OwnershipDatabase("data/example.csv")
 
@@ -230,6 +240,15 @@ db = OwnershipDatabase("data/example.csv")
 # If an invalid orgnr is given, the handler should
 # return a 400 BAD REQUEST response.
 
+# Rest API - Helper functions
+def is_valid(orgnr):
+    if len(orgnr) != 9:
+        return False
+    try:
+        int(orgnr)
+        return True
+    except ValueError:
+        return False
 
 @app.route("/<string:orgnr>/owners", methods=["GET"])
 def owners(orgnr):
@@ -238,7 +257,9 @@ def owners(orgnr):
     defined by `orgnr`.
     """
 
-    # TODO: validate `orgnr`
+    if is_valid(orgnr) != True:
+        return '400 BAD REQUEST'
+
 
     owners = db.get_owners(orgnr)
 
@@ -254,7 +275,8 @@ def holdings(orgnr):
     company defined by ``orgnr``.
     """
 
-    # TODO: validate `orgnr`
+    if is_valid(orgnr) != True:
+        return '400 BAD REQUEST'
 
     holdings = db.get_holdings(orgnr)
 
@@ -275,7 +297,8 @@ def summary(orgnr):
     * A boolean indicating if the company has multiple share classes
     """
 
-    # TODO: validate `orgnr`
+    if is_valid(orgnr) != True:
+        return '400 BAD REQUEST'
 
     result = db.get_summary(orgnr)
 
@@ -283,4 +306,4 @@ def summary(orgnr):
 
 
 if __name__ == '__main__':
-    app.run()
+    app.run(port=9999)
